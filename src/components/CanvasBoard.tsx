@@ -37,52 +37,65 @@ export default function CanvasBoard() {
         return { x: e.clientX - rect.left, y: e.clientY - rect.top }
     }
 
+    const drawSmoothLine = (ctx: CanvasRenderingContext2D, points: { x: number; y: number }[]) => {
+        if (points.length < 2) return;
+
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+
+        for (let i = 1; i < points.length - 1; i++) {
+            const midPoint = {
+                x: (points[i].x + points[i + 1].x) / 2,
+                y: (points[i].y + points[i + 1].y) / 2,
+            };
+            ctx.quadraticCurveTo(points[i].x, points[i].y, midPoint.x, midPoint.y);
+        }
+
+        ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
+        ctx.stroke();
+    };
 
     const redraw = useCallback(() => {
-        const canvas = canvasRef.current
-        if (!canvas) return
+        const canvas = canvasRef.current;
+        if (!canvas) return;
 
-        const ctx = canvas.getContext('2d')
-        if (!ctx) return
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        const scale = window.devicePixelRatio || 1;
 
-        ctx.lineJoin = 'round'
-        ctx.lineCap = 'round'
-        ctx.strokeStyle = '#000000'
-        ctx.lineWidth = 2
+        if (
+            canvas.width !== 800 * scale ||
+            canvas.height !== 600 * scale
+        ) {
+            canvas.width = 800 * scale;
+            canvas.height = 600 * scale;
+            canvas.style.width = '800px';
+            canvas.style.height = '600px';
+            ctx.scale(scale, scale);
+        }
 
-        // Live draw the current in-progress line
+        ctx.clearRect(0, 0, 800, 600);
+
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+
         if (currentLine.length > 1) {
-            ctx.beginPath()
-            currentLine.forEach((p, i) => {
-                if (i === 0) {
-                    ctx.moveTo(p.x, p.y)
-                } else {
-                    ctx.lineTo(p.x, p.y)
-                }
-            })
-
-            ctx.stroke()
+            drawSmoothLine(ctx, currentLine);
         }
 
-        // Draw saved lines
         for (const line of lines) {
-            ctx.beginPath()
-            line.points.forEach((p, i) => {
-                if (i === 0) {
-                    ctx.moveTo(p.x, p.y)
-                } else {
-                    ctx.lineTo(p.x, p.y)
-                }
-            })
-            ctx.stroke()
+            drawSmoothLine(ctx, line.points);
         }
-    }, [canvasRef, currentLine, lines])
+    }, [canvasRef, currentLine, lines]);
+
 
     useEffect(() => {
         redraw()
     }, [redraw, lines, currentLine])
+
 
 
 
